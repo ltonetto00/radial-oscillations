@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relativistic Radial Oscillations of a Polytropic Neutron Star</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1e242d;
+    --border: #2a313c;
+    --text: #e6edf3;
+    --text-2: #8b949e;
+    --accent: #58a6ff;
+    --xi-color: #378ADD;
+    --dp-color: #E07033;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  body { padding: 24px; }
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { color: var(--text-2); font-size: 13px; margin-bottom: 18px; }
+  #wrap { max-width: 680px; margin: 0 auto; }
+  canvas { display: block; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+  }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .row:last-child { margin-bottom: 0; }
+  .lbl { font-size: 11px; color: var(--text-2); min-width: 70px; }
+  .val { font-size: 11px; font-weight: 500; min-width: 60px; text-align: right; }
+  .seg-wrap {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .seg {
+    flex: 1; padding: 5px 8px; font-size: 11px; cursor: pointer;
+    background: var(--panel); color: var(--text-2); border: none;
+    font-family: inherit;
+  }
+  .seg.active { background: var(--panel-2); color: var(--text); font-weight: 500; }
+  .seg:hover { color: var(--text); }
+  .mgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 5px; }
+  .mc { background: var(--panel-2); border-radius: var(--radius-md); padding: 6px 9px; }
+  .mc-l { font-size: 10px; color: var(--text-2); margin-bottom: 2px; }
+  .mc-v { font-size: 12px; font-weight: 500; }
+  .st { font-size: 11px; color: var(--text-2); margin-bottom: 6px; }
+  #viewport {
+    position: relative; width: 400px; height: 400px;
+    background: #000; border-radius: var(--radius-lg); overflow: hidden;
+  }
+  #viewport canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .mode-btns { display: flex; gap: 4px; }
+  .mode-btn {
+    flex: 1; padding: 5px 0; font-size: 11px; cursor: pointer;
+    background: var(--panel); color: var(--text-2);
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    font-family: inherit;
+  }
+  .mode-btn.active { background: var(--panel-2); color: var(--text); font-weight: 500; }
+  .mode-btn:hover { color: var(--text); }
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none; appearance: none;
+    height: 4px; background: var(--border); border-radius: 2px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: none;
+  }
+  .layout { display: grid; grid-template-columns: 1fr 252px; gap: 10px; align-items: start; }
+  .right-stack { display: flex; flex-direction: column; gap: 8px; }
+  .footnote {
+    font-size: 11px; color: var(--text-2); margin-top: 14px;
+    line-height: 1.65; border-top: 1px solid var(--border); padding-top: 10px;
+  }
+  .footnote code { background: var(--panel-2); padding: 1px 5px; border-radius: 3px; font-size: 10.5px; }
+  .footnote-title { color: var(--text); font-weight: 500; margin-bottom: 4px; }
+  .links { font-size: 11px; color: var(--text-2); margin-top: 10px; }
+  .links a { color: var(--accent); text-decoration: none; }
+  .links a:hover { text-decoration: underline; }
+  @media (max-width: 700px) {
+    body { padding: 12px; }
+    .layout { grid-template-columns: 1fr; }
+    #viewport { width: 100%; max-width: 400px; }
+    .right-stack { width: 100%; max-width: 400px; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<h1>Relativistic Radial Oscillations</h1>
+<div class="subtitle">Polytropic neutron star · Gondek–Haensel–Zdunik (1997) formulation</div>
+
+<div class="layout">
+
+  <div id="viewport">
+    <canvas id="c2d" width="400" height="400"></canvas>
+    <div id="c3d-wrap" style="display:none;width:100%;height:100%"></div>
+  </div>
+
+  <div class="right-stack">
+
+    <div class="panel">
+      <div class="st">View</div>
+      <div class="seg-wrap">
+        <button class="seg active" id="vw-2d" onclick="setView('2d')">2D slice</button>
+        <button class="seg" id="vw-3d" onclick="setView('3d')">3D</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="st">Polytrope: p = K ρ<sup>1+1/n</sup>, n = 1, K = 100 km²</div>
+    </div>
+
+    <div class="panel">
+      <div class="st">Radial mode n</div>
+      <div class="mode-btns">
+        <button class="mode-btn active" onclick="setMode(0)" id="mb-0">0</button>
+        <button class="mode-btn" onclick="setMode(1)" id="mb-1">1</button>
+        <button class="mode-btn" onclick="setMode(2)" id="mb-2">2</button>
+        <button class="mode-btn" onclick="setMode(3)" id="mb-3">3</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <span class="lbl">log ρ<sub>c</sub></span>
+        <input type="range" id="rc-sl" min="14.7" max="15.85" step="0.02" value="15.0" oninput="onRhoC(this.value)">
+        <span class="val" id="rc-val">1.0e15</span>
+      </div>
+      <div class="row">
+        <span class="lbl">Amplitude ε</span>
+        <input type="range" id="eps-sl" min="-3" max="-0.52" step="0.02" value="-0.82" oninput="onEps(this.value)">
+        <span class="val" id="eps-val">0.150</span>
+      </div>
+      <div class="row">
+        <span class="lbl">Speed</span>
+        <input type="range" id="spd-sl" min="0.2" max="3" step="0.1" value="1" oninput="onSpeed(this.value)">
+        <span class="val" id="spd-val">1.0×</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="st">Physical parameters</div>
+      <div class="mgrid">
+        <div class="mc"><div class="mc-l">ω (s⁻¹)</div><div class="mc-v" id="m-omega">—</div></div>
+        <div class="mc"><div class="mc-l">f (kHz)</div><div class="mc-v" id="m-freq">—</div></div>
+        <div class="mc"><div class="mc-l">Period</div><div class="mc-v" id="m-period">—</div></div>
+        <div class="mc"><div class="mc-l">Mass</div><div class="mc-v" id="m-mass">—</div></div>
+        <div class="mc"><div class="mc-l">Radius</div><div class="mc-v" id="m-radius">—</div></div>
+        <div class="mc"><div class="mc-l">P<sub>c</sub></div><div class="mc-v" id="m-pc">—</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="st">
+        <span style="color: var(--xi-color)">ξ(r)</span> and
+        <span style="color: var(--dp-color)">Δp(r)</span> — mode n=<span id="lbl-mode">0</span>
+      </div>
+      <canvas id="ef" width="228" height="76"></canvas>
+    </div>
+
+  </div>
+</div>
+
+<div class="footnote">
+  <div class="footnote-title">How ε is defined</div>
+  Following Gondek–Haensel–Zdunik (1997), the dimensionless eigenfunction is
+  <code>ξ(r) ≡ Δr / r</code>, the <em>relative</em> radial Lagrangian displacement.
+  The animation maps this to a finite, time-dependent displacement
+  <code>Δr(r, t) = ε · ξ(r) · r · cos(ωt)</code>, so the radius of a fluid shell originally at
+  <code>r</code> becomes <code>r · [1 + ε · ξ(r) · cos(ωt)]</code>. The linearized perturbation equations are
+  valid in the limit ε → 0; here ε is enlarged purely for visualization (the
+  computed ω and ξ are unchanged). For ε ≪ 1 the motion is invisible; for ε ≳ 0.3
+  the linear approximation breaks down. Values ε ≈ 0.05–0.2 give clear visualization
+  while remaining in the linear regime.
+  <div class="links">
+    Source &amp; documentation: <a href="https://github.com/" id="repo-link">add your GitHub URL here</a>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const N=800;
+const G=6.6743e-8, c_cgs=2.99792458e10, Msun=1.989e33;
+const km=1e5;
+const RHO_GEO_TO_CGS = c_cgs*c_cgs/(G*km*km);
+const RHO_CGS_TO_GEO = 1.0/RHO_GEO_TO_CGS;
+const TIME_KM_TO_S = km/c_cgs;
+const MASS_KM_TO_G = c_cgs*c_cgs*km/G;
+
+const n_poly = 1.0;
+const K_geo = 100.0;
+
+let view='2d', modeN=0;
+let rho_c_cgs=1e15;
+let eps=0.15, speed=1.0, phase=0, lastTS=null;
+
+let omegaGeo=1, omegaPhys=1, R_km=10, M_g=Msun, Pc_cgs=0;
+let r_arr=new Float64Array(N+1);
+let rho_arr=new Float64Array(N+1);
+let p_arr=new Float64Array(N+1);
+let m_arr=new Float64Array(N+1);
+let nu_arr=new Float64Array(N+1);
+let lam_arr=new Float64Array(N+1);
+let dpdr_arr=new Float64Array(N+1);
+let gamma_arr=new Float64Array(N+1);
+
+let xi_arr=new Float64Array(N+1);
+let dp_arr=new Float64Array(N+1);
+
+window.onEps=function(v){
+  eps=Math.pow(10,+v);
+  document.getElementById('eps-val').textContent=eps<0.01?eps.toExponential(2):eps.toFixed(3);
+};
+window.onSpeed=function(v){
+  speed=+v;
+  document.getElementById('spd-val').textContent=(+v).toFixed(1)+'×';
+};
+window.onRhoC=function(v){
+  rho_c_cgs=Math.pow(10,+v);
+  document.getElementById('rc-val').textContent=rho_c_cgs.toExponential(1);
+  recompute();
+};
+
+function eos_p_of_rho(rho){ return K_geo*Math.pow(rho,1+1/n_poly); }
+function eos_rho_of_p(p){ return Math.pow(p/K_geo,1/(1+1/n_poly)); }
+function eos_gamma(p,rho){
+  if(p<=0||rho<=0) return 1+1/n_poly;
+  const dpdrho=K_geo*(1+1/n_poly)*Math.pow(rho,1/n_poly);
+  return (rho+p)/p * dpdrho;
+}
+
+function tovRHS(r,p,m){
+  if(p<=0) return [0,0];
+  const rho=eos_rho_of_p(p);
+  const dp = -((rho+p)*(m+4*Math.PI*r*r*r*p))/(r*(r-2*m));
+  const dm = 4*Math.PI*r*r*rho;
+  return [dp,dm];
+}
+
+function solveTOV(){
+  const rho_c_geo = rho_c_cgs * RHO_CGS_TO_GEO;
+  const p_c = eos_p_of_rho(rho_c_geo);
+  Pc_cgs = p_c * RHO_GEO_TO_CGS * c_cgs * c_cgs;
+
+  const rmin = 1e-6;
+  const m_c = (4/3)*Math.PI*rho_c_geo*Math.pow(rmin,3);
+  let p=p_c, m=m_c, r=rmin;
+  const profile=[{r,p,m}];
+  let h=0.0005;
+  for(let step=0; step<500000; step++){
+    const k1=tovRHS(r,p,m);
+    if(p+h*k1[0]<=0){
+      const frac = p/(-k1[0]);
+      r+=frac; m+=frac*k1[1]; p=0;
+      profile.push({r,p:0,m});
+      break;
+    }
+    const k2=tovRHS(r+h/2,p+h/2*k1[0],m+h/2*k1[1]);
+    const k3=tovRHS(r+h/2,p+h/2*k2[0],m+h/2*k2[1]);
+    const k4=tovRHS(r+h,p+h*k3[0],m+h*k3[1]);
+    p+=h/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    m+=h/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+    r+=h;
+    if(p<=0){profile.push({r,p:0,m});break;}
+    profile.push({r,p,m});
+    const p_ratio = p/p_c;
+    if(p_ratio>0.5) h=0.0005;
+    else if(p_ratio>0.1) h=0.0003;
+    else if(p_ratio>0.01) h=0.0001;
+    else h=0.00003;
+  }
+  const R=profile[profile.length-1].r;
+  const M=profile[profile.length-1].m;
+  R_km=R; M_g=M*MASS_KM_TO_G;
+
+  for(let i=0;i<=N;i++){
+    const ri=R*i/N;
+    let lo=0,hi=profile.length-1;
+    while(hi-lo>1){const mid=(lo+hi)>>1;if(profile[mid].r<=ri)lo=mid;else hi=mid;}
+    const f=(ri-profile[lo].r)/(profile[hi].r-profile[lo].r+1e-30);
+    r_arr[i]=ri;
+    p_arr[i]=Math.max(profile[lo].p+f*(profile[hi].p-profile[lo].p),0);
+    m_arr[i]=profile[lo].m+f*(profile[hi].m-profile[lo].m);
+    rho_arr[i]=p_arr[i]>0?eos_rho_of_p(p_arr[i]):0;
+  }
+
+  for(let i=0;i<=N;i++){
+    const ri=r_arr[i], mi=m_arr[i];
+    if(ri<1e-10){ lam_arr[i]=0; } else {
+      lam_arr[i]=-Math.log(Math.max(1-2*mi/ri,1e-12));
+    }
+  }
+  nu_arr[N]=Math.log(1-2*M/R);
+  for(let i=N-1;i>=0;i--){
+    const dr=r_arr[i+1]-r_arr[i];
+    const ri=r_arr[i], mi=m_arr[i], pi=p_arr[i];
+    const rip=r_arr[i+1], mip=m_arr[i+1], pip=p_arr[i+1];
+    let dnu_i, dnu_ip;
+    if(ri<1e-10){dnu_i=0;} else {
+      dnu_i = 2*(mi+4*Math.PI*ri*ri*ri*pi)/(ri*(ri-2*mi));
+    }
+    dnu_ip = 2*(mip+4*Math.PI*rip*rip*rip*pip)/(rip*(rip-2*mip));
+    nu_arr[i]=nu_arr[i+1]-0.5*dr*(dnu_i+dnu_ip);
+  }
+
+  for(let i=0;i<=N;i++){
+    const ri=r_arr[i], pi=p_arr[i], rhoi=rho_arr[i], mi=m_arr[i];
+    if(pi>0 && ri>1e-10){
+      dpdr_arr[i]=-((rhoi+pi)*(mi+4*Math.PI*ri*ri*ri*pi))/(ri*(ri-2*mi));
+    } else {
+      dpdr_arr[i]=0;
+    }
+    gamma_arr[i]=eos_gamma(pi,rhoi);
+  }
+}
+
+function ghzCoefs(i){
+  return {
+    r:r_arr[i], p:p_arr[i], rho:rho_arr[i],
+    nu:nu_arr[i], lam:lam_arr[i],
+    dpdr:dpdr_arr[i], gam:gamma_arr[i]
+  };
+}
+
+function ghzRHS(c, xi, dp, om2){
+  if(c.r<1e-10 || c.p<=0) return [0,0];
+  const rhopc2 = c.p+c.rho;
+  const dxi_dr = -(1/c.r)*(3*xi + dp/(c.gam*c.p)) - c.dpdr*xi/rhopc2;
+  const expLm = Math.exp(c.lam);
+  const expLmN = Math.exp(c.lam-c.nu);
+  const term1 = xi*(om2*expLmN*rhopc2*c.r - 4*c.dpdr);
+  const term2 = xi*(c.dpdr*c.dpdr*c.r/rhopc2 - 8*Math.PI*expLm*rhopc2*c.p*c.r);
+  const term3 = dp*(c.dpdr/rhopc2 - 4*Math.PI*rhopc2*c.r*expLm);
+  return [dxi_dr, term1+term2+term3];
+}
+
+function ghzCoefsMid(i){
+  const j=i, jp=i+1;
+  const r=(r_arr[j]+r_arr[jp])/2;
+  const f=0.5;
+  return {
+    r,
+    p:p_arr[j]+f*(p_arr[jp]-p_arr[j]),
+    rho:rho_arr[j]+f*(rho_arr[jp]-rho_arr[j]),
+    nu:nu_arr[j]+f*(nu_arr[jp]-nu_arr[j]),
+    lam:lam_arr[j]+f*(lam_arr[jp]-lam_arr[j]),
+    dpdr:dpdr_arr[j]+f*(dpdr_arr[jp]-dpdr_arr[j]),
+    gam:gamma_arr[j]+f*(gamma_arr[jp]-gamma_arr[j])
+  };
+}
+
+function integrateGHZ(om2, store){
+  const xi0 = 1.0;
+  const p0 = p_arr[0];
+  const gam0 = gamma_arr[0];
+  const dp0 = -3*xi0*gam0*p0;
+  let xi=xi0, dp=dp0;
+  if(store){xi_arr[0]=xi; dp_arr[0]=dp;}
+  let lastXi=xi;
+  let nodes=0;
+  for(let i=0;i<N;i++){
+    const dr=r_arr[i+1]-r_arr[i];
+    if(dr<=0) continue;
+    const c1=ghzCoefs(i);
+    const cMid=ghzCoefsMid(i);
+    const c4=ghzCoefs(i+1);
+    const k1=ghzRHS(c1,xi,dp,om2);
+    const k2=ghzRHS(cMid,xi+dr/2*k1[0],dp+dr/2*k1[1],om2);
+    const k3=ghzRHS(cMid,xi+dr/2*k2[0],dp+dr/2*k2[1],om2);
+    const k4=ghzRHS(c4,xi+dr*k3[0],dp+dr*k3[1],om2);
+    const newXi=xi+dr/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    const newDp=dp+dr/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+    if(lastXi*newXi<0 && i>2) nodes++;
+    lastXi=newXi;
+    xi=newXi; dp=newDp;
+    if(store){xi_arr[i+1]=xi; dp_arr[i+1]=dp;}
+  }
+  return {dp_surf:dp, xi_surf:xi, nodes};
+}
+
+function findEigenvalues(){
+  const omMin=1e-4, omMax=0.6;
+  const steps=2500;
+  const vals=[];
+  for(let i=0;i<=steps;i++){
+    const om=omMin*Math.pow(omMax/omMin,i/steps);
+    const r=integrateGHZ(om*om,false);
+    vals.push({om,bc:r.dp_surf});
+  }
+  const roots=[];
+  for(let i=1;i<vals.length;i++){
+    if(vals[i-1].bc*vals[i].bc<0 && isFinite(vals[i-1].bc) && isFinite(vals[i].bc)){
+      let lo=vals[i-1].om, hi=vals[i].om, flo=vals[i-1].bc;
+      for(let k=0;k<80;k++){
+        const mid=Math.sqrt(lo*hi);
+        const fm=integrateGHZ(mid*mid,false).dp_surf;
+        if(flo*fm<0){hi=mid;}else{lo=mid;flo=fm;}
+        if(Math.abs(hi/lo-1)<1e-12)break;
+      }
+      roots.push(Math.sqrt(lo*hi));
+    }
+  }
+  return roots;
+}
+
+let cachedRoots=[];
+function solveEigen(){
+  cachedRoots=findEigenvalues();
+  omegaGeo=cachedRoots.length>0?cachedRoots[Math.min(modeN,cachedRoots.length-1)]:0.1;
+  integrateGHZ(omegaGeo*omegaGeo,true);
+  let mx_xi=1e-12, mx_dp=1e-12;
+  for(let i=0;i<=N;i++){
+    mx_xi=Math.max(mx_xi,Math.abs(xi_arr[i]));
+    mx_dp=Math.max(mx_dp,Math.abs(dp_arr[i]));
+  }
+  for(let i=0;i<=N;i++){xi_arr[i]/=mx_xi; dp_arr[i]/=mx_dp;}
+  omegaPhys=omegaGeo / TIME_KM_TO_S;
+}
+
+function fmtTime(T){
+  if(!isFinite(T)||T<=0) return '—';
+  if(T<1e-3) return (T*1e6).toFixed(1)+' μs';
+  if(T<1) return (T*1e3).toFixed(2)+' ms';
+  return T.toFixed(2)+' s';
+}
+
+function updateMetrics(){
+  document.getElementById('m-omega').textContent=omegaPhys.toExponential(3);
+  document.getElementById('m-freq').textContent=(omegaPhys/(2*Math.PI*1000)).toFixed(3);
+  document.getElementById('m-period').textContent=fmtTime(2*Math.PI/omegaPhys);
+  document.getElementById('m-mass').textContent=(M_g/Msun).toFixed(3)+' M☉';
+  document.getElementById('m-radius').textContent=R_km.toFixed(2)+' km';
+  document.getElementById('m-pc').textContent=Pc_cgs.toExponential(2)+' dyn/cm²';
+  document.getElementById('lbl-mode').textContent=modeN;
+}
+
+function drawEF(){
+  const cv=document.getElementById('ef'), x=cv.getContext('2d');
+  const w=cv.width, h=cv.height;
+  x.clearRect(0,0,w,h);
+  x.strokeStyle='rgba(139,148,158,0.3)'; x.lineWidth=0.5;
+  x.beginPath(); x.moveTo(0,h/2); x.lineTo(w,h/2); x.stroke();
+  x.strokeStyle='#378ADD'; x.lineWidth=1.5; x.beginPath();
+  for(let i=0;i<=N;i++){
+    const xx=(i/N)*w, yy=h/2-xi_arr[i]*(h*0.42);
+    i===0?x.moveTo(xx,yy):x.lineTo(xx,yy);
+  }
+  x.stroke();
+  x.strokeStyle='#E07033'; x.lineWidth=1.5; x.beginPath();
+  for(let i=0;i<=N;i++){
+    const xx=(i/N)*w, yy=h/2-dp_arr[i]*(h*0.42);
+    i===0?x.moveTo(xx,yy):x.lineTo(xx,yy);
+  }
+  x.stroke();
+  x.fillStyle='rgba(139,148,158,0.8)'; x.font='9px sans-serif';
+  x.fillText('0',2,h-2); x.fillText('R',w-8,h-2);
+}
+
+function recompute(){
+  solveTOV(); solveEigen(); updateMetrics(); drawEF();
+}
+
+window.setMode=function(n){
+  modeN=n;
+  for(let i=0;i<4;i++) document.getElementById('mb-'+i).classList.toggle('active',i===n);
+  if(cachedRoots.length===0) cachedRoots=findEigenvalues();
+  omegaGeo=cachedRoots[Math.min(n,cachedRoots.length-1)] || 0.1;
+  integrateGHZ(omegaGeo*omegaGeo,true);
+  let mx_xi=1e-12, mx_dp=1e-12;
+  for(let i=0;i<=N;i++){
+    mx_xi=Math.max(mx_xi,Math.abs(xi_arr[i]));
+    mx_dp=Math.max(mx_dp,Math.abs(dp_arr[i]));
+  }
+  for(let i=0;i<=N;i++){xi_arr[i]/=mx_xi; dp_arr[i]/=mx_dp;}
+  omegaPhys=omegaGeo / TIME_KM_TO_S;
+  updateMetrics(); drawEF();
+};
+
+window.setView=function(v){
+  view=v;
+  document.getElementById('vw-2d').classList.toggle('active',v==='2d');
+  document.getElementById('vw-3d').classList.toggle('active',v==='3d');
+  document.getElementById('c2d').style.display=v==='2d'?'block':'none';
+  document.getElementById('c3d-wrap').style.display=v==='3d'?'block':'none';
+  if(v==='3d' && !threeReady) init3D();
+};
+
+const c2d=document.getElementById('c2d'), ctx=c2d.getContext('2d');
+const W=c2d.width, H=c2d.height, cx=W/2, cy=H/2, R0=Math.min(W,H)*0.42;
+
+function render2D(cosT){
+  ctx.clearRect(0,0,W,H);
+  const imgD=ctx.createImageData(W,H), d=imgD.data;
+  for(let py=0;py<H;py++){
+    for(let px=0;px<W;px++){
+      const dx=(px-cx)/R0, dy=(cy-py)/R0;
+      const rN=Math.sqrt(dx*dx+dy*dy);
+      if(rN>1.15) continue;
+      const iN=Math.min(Math.round(rN*N),N);
+      const xiR=xi_arr[iN];
+      const denom=1+eps*xiR*cosT;
+      if(Math.abs(denom)<0.01) continue;
+      const rP=rN/denom;
+      if(rP>1.0) continue;
+      const iP=Math.min(Math.round(rP*N),N-1);
+      const drho=-dp_arr[iP]*eps*cosT;
+      const norm=Math.min(Math.max(drho/0.6,-1),1);
+      let rc,gc,bc;
+      if(norm>=0){rc=55+Math.round(norm*120);gc=120+Math.round(norm*40);bc=210-Math.round(norm*60);}
+      else{const a=-norm;rc=55+Math.round(a*165);gc=120-Math.round(a*100);bc=210-Math.round(a*195);}
+      const fade=Math.max(0,1-Math.max(0,(rP-0.90)/0.10));
+      const p=(py*W+px)*4;
+      d[p]=rc;d[p+1]=gc;d[p+2]=bc;d[p+3]=Math.round(215*fade);
+    }
+  }
+  ctx.putImageData(imgD,0,0);
+  ctx.beginPath();
+  const xiS=xi_arr[N];
+  for(let j=0;j<=80;j++){
+    const a=j/80*2*Math.PI, rS=R0*(1+eps*xiS*cosT);
+    const x=cx+rS*Math.cos(a), y=cy-rS*Math.sin(a);
+    j===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle='rgba(255,255,255,0.65)'; ctx.lineWidth=1.5; ctx.stroke();
+}
+
+let threeReady=false, scene, camera, renderer, sphereMat, sphereGeo, sphereMesh, sliceMesh, sliceMat;
+const SHADER_N=200;
+function init3D(){
+  if(typeof THREE==='undefined'){
+    document.getElementById('c3d-wrap').innerHTML='<div style="color:#888;padding:1em;font-size:12px;">Three.js failed to load. Check your network connection.</div>';
+    return;
+  }
+  const wrap=document.getElementById('c3d-wrap');
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x000000);
+  camera=new THREE.PerspectiveCamera(40,1,0.1,100);
+  camera.position.set(2.6,1.4,2.6); camera.lookAt(0,0,0);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(400,400);
+  wrap.appendChild(renderer.domElement);
+
+  const uniforms={uEps:{value:eps}, uCosT:{value:1}, uDp:{value:new Float32Array(SHADER_N+1)}, uN:{value:SHADER_N}};
+  const vs=`varying vec3 vPos; void main(){vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
+  const fs=`precision highp float; varying vec3 vPos; uniform float uEps; uniform float uCosT; uniform float uN; uniform float uDp[201];
+    void main(){ float r=length(vPos); if(r>1.0) discard;
+      int idx=int(min(r*uN,uN)); float dv=uDp[idx];
+      float drho=-dv*uEps*uCosT; float n=clamp(drho/0.6,-1.0,1.0); vec3 col;
+      if(n>=0.0) col=vec3(0.22+n*0.47,0.47+n*0.16,0.82-n*0.24);
+      else { float a=-n; col=vec3(0.22+a*0.65,0.47-a*0.39,0.82-a*0.76); }
+      float fade=1.0-smoothstep(0.90,1.0,r);
+      gl_FragColor=vec4(col,fade*0.95);
+    }`;
+  sliceMat=new THREE.ShaderMaterial({uniforms,vertexShader:vs,fragmentShader:fs,transparent:true,side:THREE.DoubleSide});
+  sliceMesh=new THREE.Mesh(new THREE.CircleGeometry(1.0,64),sliceMat);
+  sliceMesh.rotation.x=-Math.PI/2;
+  scene.add(sliceMesh);
+  sphereGeo=new THREE.SphereGeometry(1,48,32);
+  sphereMat=new THREE.MeshBasicMaterial({color:0x6699ff,transparent:true,opacity:0.18,side:THREE.FrontSide});
+  sphereMesh=new THREE.Mesh(sphereGeo,sphereMat);
+  scene.add(sphereMesh);
+  const wireMat=new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:0.15});
+  const wire=new THREE.Mesh(new THREE.SphereGeometry(1.001,24,16),wireMat);
+  scene.add(wire); sphereMesh.userData.wire=wire;
+  let isDrag=false,lastX=0,lastY=0,rotY=Math.PI/4,rotX=0.4;
+  renderer.domElement.addEventListener('mousedown',e=>{isDrag=true;lastX=e.clientX;lastY=e.clientY;});
+  window.addEventListener('mouseup',()=>isDrag=false);
+  window.addEventListener('mousemove',e=>{
+    if(!isDrag) return;
+    rotY+=(e.clientX-lastX)*0.01;
+    rotX=Math.max(-1.4,Math.min(1.4,rotX+(e.clientY-lastY)*0.01));
+    lastX=e.clientX; lastY=e.clientY;
+    const d=3.6;
+    camera.position.set(d*Math.cos(rotX)*Math.sin(rotY),d*Math.sin(rotX),d*Math.cos(rotX)*Math.cos(rotY));
+    camera.lookAt(0,0,0);
+  });
+  threeReady=true;
+}
+
+function update3DUniforms(cosT){
+  if(!threeReady) return;
+  const u=sliceMat.uniforms;
+  u.uEps.value=eps; u.uCosT.value=cosT;
+  for(let i=0;i<=SHADER_N;i++){
+    const srcIdx=Math.round(i/SHADER_N*N);
+    u.uDp.value[i]=dp_arr[srcIdx];
+  }
+  const xiS=xi_arr[N];
+  const scale=1+eps*xiS*cosT;
+  sphereMesh.scale.set(scale,scale,scale);
+  sphereMesh.userData.wire.scale.set(scale,scale,scale);
+  sliceMesh.scale.set(scale,scale,scale);
+}
+
+function loop(ts){
+  requestAnimationFrame(loop);
+  if(lastTS===null) lastTS=ts;
+  const dt=Math.min((ts-lastTS)/1000,0.05);
+  lastTS=ts;
+  phase+=dt*speed*omegaGeo*20;
+  const cosT=Math.cos(phase);
+  if(view==='2d') render2D(cosT);
+  else if(threeReady){update3DUniforms(cosT); renderer.render(scene,camera);}
+}
+
+recompute();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
